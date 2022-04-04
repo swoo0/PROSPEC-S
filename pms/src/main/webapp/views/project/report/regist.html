@@ -1,0 +1,139 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8" />
+	<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="spreadjs culture" content="ko-kr" />
+	<title>디자이너 컴포넌트</title>
+	<link href="./spreadjs/css/gc.spread.sheets.excel2013white.15.0.3.css" rel="stylesheet" type="text/css" />
+	<link href="./designer/css/gc.spread.sheets.designer.15.0.3.min.css" rel="stylesheet" type="text/css">
+	<link href="./custom.css" rel="stylesheet" type="text/css">
+	<style type="text/css">
+		html,
+		body {
+			overflow: hidden;
+			padding: 0;
+			margin: 0;
+			height: 100%;
+		}
+
+		#gc-designer-container {
+			height: 100%;
+		}
+	</style>
+</head>
+
+<body unselectable="on">
+	<div class="inputContainer">
+		<input type="checkbox" id="incremental" checked="">
+		<label for="incremental">Incremental Loading</label>
+		<p class="summary" id="loading-container">
+				Loading progress: 
+				<input style="width: 231px;" id="loadingStatus" type="range" name="points" min="0" max="100" value="0" step="0.01">
+		</p>
+		<input type="button" value="Export PDF" id="savePDF">
+		<input type="file" id="fileDemo" class="input">
+		<input type="button" value="import" id="loadExcel">
+		<input type="button" value="export" id="saveExcel">
+		
+</div>
+	<div id="gc-designer-container"> </div>
+
+	<script type="text/javascript" src="./spreadjs/scripts/gc.spread.sheets.all.15.0.3.min.js"></script>
+	<script src="./spreadjs/scripts/gc.spread.sheets.charts.15.0.3.min.js"></script>
+	<script src="./spreadjs/scripts/gc.spread.sheets.shapes.15.0.3.min.js"></script>
+	<script src="./spreadjs/scripts/gc.spread.sheets.print.15.0.3.min.js"></script>
+	<script src="./spreadjs/scripts/gc.spread.sheets.barcode.15.0.3.min.js"></script>
+	<script src="./spreadjs/scripts/gc.spread.sheets.pdf.15.0.3.min.js"></script>
+	<script src="./spreadjs/scripts/gc.spread.pivot.pivottables.15.0.3.min.js"></script>
+	<script src="./spreadjs/scripts/gc.spread.sheets.tablesheet.15.0.3.min.js"></script>
+	<script src="./spreadjs/scripts/gc.spread.sheets.resources.ko.15.0.3.min.js"></script>
+	<script src="./spreadjs/scripts/gc.spread.excelio.15.0.3.min.js"></script>
+
+	<script src="./designer/scripts/gc.spread.sheets.designer.resource.ko.15.0.3.min.js"></script>
+	<script src="./designer/scripts/gc.spread.sheets.designer.all.15.0.3.min.js"></script>
+	<script src="./license.js"></script>
+	<script type="text/javascript">
+		window.onload = function () {
+			var designer = new GC.Spread.Sheets.Designer.Designer(document.getElementById("gc-designer-container"));
+			var spread = designer.getWorkbook();
+			spread.setSheetCount(2);
+
+			// PDF 저장기능
+			document.getElementById('savePDF').onclick = function () {
+					spread.savePDF(
+							function (blob) {
+									saveAs(blob, 'download.pdf');
+							},
+							console.log,
+							{
+									title: 'Test Title',
+									author: 'Test Author',
+									subject: 'Test Subject',
+									keywords: 'Test Keywords',
+									creator: 'test Creator'
+							});
+			};
+
+			// 엑셀파일 불러오기 기능
+			var excelIo = new GC.Spread.Excel.IO();
+			document.getElementById('loadExcel').onclick = function () {
+					var excelFile = document.getElementById("fileDemo").files[0];
+					var incrementalEle = document.getElementById("incremental");
+					var loadingStatus = document.getElementById("loadingStatus");
+					incrementalEle.addEventListener('change', function (e) {
+							document.getElementById('loading-container').style.display = incrementalEle.checked ? "block" : "none";
+					});
+					// here is excel IO API
+					excelIo.open(excelFile, function (json) {
+							var workbookObj = json;
+							if (incrementalEle.checked) {
+									spread.fromJSON(workbookObj, {
+											incrementalLoading: {
+													loading: function (progress, args) {
+															progress = progress * 100;
+															loadingStatus.value = progress;
+															console.log("current loading sheet", args.sheet && args.sheet.name());
+													},
+													loaded: function () {
+													}
+											}
+									});
+							} else {
+							spread.fromJSON(workbookObj);
+							}
+					}, function (e) {
+							// process error
+							alert(e.errorMessage);
+							
+					});
+			};
+
+
+			// 엑셀파일 저장하기 기능
+			document.getElementById('saveExcel').onclick = function () {
+
+					var fileName = "a";
+					if (fileName.substr(-5, 5) !== '.xlsx') {
+							fileName += '.xlsx';
+					}
+
+					var json = spread.toJSON();
+
+					// here is excel IO API
+					excelIo.save(json, function (blob) {
+							saveAs(blob, fileName);
+					}, function (e) {
+							// process error
+							console.log(e);
+					});
+
+			};
+		}
+	</script>
+</body>
+
+</html>
